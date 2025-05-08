@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Briefcase, User, Mail, Send, Menu, X, Linkedin, Github, Code, Eye, ExternalLink, Download, Loader2 } from 'lucide-react'; // Added Loader2 icon
+import { Sun, Moon, Briefcase, User, Mail, Send, Menu, X, Linkedin, Github, Code, Eye, ExternalLink, Download, Loader2 } from 'lucide-react'; // Loader2 se mantiene por si se quiere re-añadir estado de carga visual
 
-// Objeto con todas las traducciones
 const content = {
   es: {
     // Navbar
@@ -44,6 +43,7 @@ const content = {
     // Contact Section
     contactTitle: "Contáctame",
     contactIntro: "¿Tienes alguna pregunta, propuesta o simplemente quieres saludar? No dudes en enviarme un mensaje.",
+    // Textos del formulario actualizados para la nueva lógica
     contactFormNameLabel: "Nombre",
     contactFormNamePlaceholder: "Tu Nombre",
     contactFormEmailLabel: "Email",
@@ -52,16 +52,16 @@ const content = {
     contactFormMessagePlaceholder: "Escribe tu mensaje aquí...",
     contactFormSendBtn: "Enviar Mensaje",
     contactFormSendingBtn: "Enviando...", 
-    contactFormErrorAllFields: "Por favor, completa todos los campos.",
-    contactFormErrorInvalidEmail: "Por favor, introduce un email válido.",
-    contactFormErrorApi: "Error al enviar el mensaje. Inténtalo de nuevo más tarde.", 
-    contactFormSuccessTitle: "¡Gracias!",
-    contactFormSuccessMessage: "Tu mensaje ha sido enviado. Me pondré en contacto contigo pronto.",
+    contactFormErrorAllFields: "Por favor, completa todos los campos.", // Ya no se usa directamente en el form, pero se mantiene
+    contactFormErrorInvalidEmail: "Por favor, introduce un email válido.", // Ya no se usa directamente en el form, pero se mantiene
+    contactFormErrorApi: "Ocurrió un error al enviar el formulario.", // Mensaje de error genérico de Formspree
+    contactFormErrorNetwork: "No se pudo enviar. Revisa tu conexión.", // Mensaje para error de red
+    contactFormSuccessTitle: "¡Enviado!", // Título de éxito
+    contactFormSuccessMessage: "Gracias por tu mensaje, te contestaré a la brevedad", // Mensaje de éxito
 
     // Footer
     footerRightsName: "Constanza Rivera",
     footerRightsReserved: "Todos los derechos reservados.",
-    footerMadeWith: "Hecho con",
 
 
     // General
@@ -107,6 +107,7 @@ const content = {
     // Contact Section
     contactTitle: "Contact Me",
     contactIntro: "Have a question, proposal, or just want to say hi? Feel free to send me a message.",
+    // Form texts updated for the new logic
     contactFormNameLabel: "Name",
     contactFormNamePlaceholder: "Your Name",
     contactFormEmailLabel: "Email",
@@ -115,11 +116,12 @@ const content = {
     contactFormMessagePlaceholder: "Write your message here...",
     contactFormSendBtn: "Send Message",
     contactFormSendingBtn: "Sending...", 
-    contactFormErrorAllFields: "Please fill in all fields.",
-    contactFormErrorInvalidEmail: "Please enter a valid email.",
-    contactFormErrorApi: "Error sending message. Please try again later.", 
-    contactFormSuccessTitle: "Thank You!",
-    contactFormSuccessMessage: "Your message has been sent. I will get in touch with you soon.",
+    contactFormErrorAllFields: "Please fill in all fields.", // Not used directly in form anymore, but kept
+    contactFormErrorInvalidEmail: "Please enter a valid email.", // Not used directly in form anymore, but kept
+    contactFormErrorApi: "An error occurred while submitting the form.", // Generic Formspree error message
+    contactFormErrorNetwork: "Could not send. Check your connection.", // Network error message
+    contactFormSuccessTitle: "Submitted!", // Success title
+    contactFormSuccessMessage: "Thank you for your message.", // Success message
 
     // Footer
     footerRightsName: "Constanza Rivera",
@@ -331,43 +333,45 @@ const Navbar: React.FC<NavbarProps> = ({ darkMode, toggleDarkMode, scrollToSecti
   );
 };
 
-// --- Componente ContactForm (Modificado para usar fetch) ---
+// --- Componente ContactForm (Integrado con Formspree y estilos del tema) ---
 interface ContactFormProps {
-  darkMode: boolean;
-  language: 'es' | 'en';
-  texts: typeof content.es;
+  darkMode: boolean; // Mantener para los estilos
+  language: 'es' | 'en'; // Mantener para los textos
+  texts: typeof content.es; // Usar textos pasados como props
 }
 const ContactForm: React.FC<ContactFormProps> = ({ darkMode, language, texts }) => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle'); 
-  const [error, setError] = useState('');
+  const [errorMessage, setErrorMessage] = useState(''); // Estado específico para mensajes de error
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Limpiar error al escribir
     if (status === 'error') {
-        setError('');
+        setErrorMessage('');
         setStatus('idle');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(''); 
+    setErrorMessage(''); // Limpiar errores previos
 
+    // Validación simple (opcional, Formspree también valida)
     if (!formData.name || !formData.email || !formData.message) {
-      setError(texts.contactFormErrorAllFields);
+      setErrorMessage(texts.contactFormErrorAllFields); // Usar texto traducido
+      setStatus('error');
       return;
     }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError(texts.contactFormErrorInvalidEmail);
+     if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrorMessage(texts.contactFormErrorInvalidEmail); // Usar texto traducido
+      setStatus('error');
       return;
     }
 
     setStatus('loading'); 
 
-    // Endpoint de ejemplo - ¡REEMPLAZA ESTO CON TU ENDPOINT REAL!
-    // Puede ser de Formspree, tu API de Vercel (/api/send-email), etc.
-    const FORM_ENDPOINT = "/api/send-email"; // O tu URL de Formspree, etc.
+    const FORM_ENDPOINT = "https://formspree.io/f/xdkgzjzo"; 
 
     try {
       const response = await fetch(FORM_ENDPOINT, {
@@ -384,22 +388,25 @@ const ContactForm: React.FC<ContactFormProps> = ({ darkMode, language, texts }) 
         setFormData({ name: '', email: '', message: '' }); 
         setTimeout(() => setStatus('idle'), 5000); 
       } else {
-        console.error("Error en la respuesta del servidor:", response);
-        const errorData = await response.json().catch(() => ({})); // Intenta obtener datos del error
-        setError(errorData.message || texts.contactFormErrorApi); // Usa mensaje del servidor si existe
+        // Intentar obtener mensaje de error de Formspree si existe
+        const errorData = await response.json().catch(() => ({})); 
+        console.error("Error response from Formspree:", errorData);
+        setErrorMessage(errorData.error || texts.contactFormErrorApi); // Usar error de Formspree o genérico
         setStatus('error');
       }
     } catch (fetchError) {
-      console.error("Error en fetch:", fetchError);
-      setError(texts.contactFormErrorApi);
+      console.error("Fetch error:", fetchError);
+      setErrorMessage(texts.contactFormErrorNetwork); // Error de red
       setStatus('error');
     }
   };
 
+  // Clases de Tailwind para los inputs (consistente con el tema)
   const inputClasses = `w-full px-4 py-3 rounded-lg border transition-all duration-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${
     darkMode ? 'bg-slate-700 border-slate-600 placeholder-slate-400 text-white' : 'bg-gray-100 border-gray-300 placeholder-gray-500 text-gray-900'
   }`;
 
+  // Mensaje de éxito
   if (status === 'success') {
     return (
       <div className="text-center p-6 bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded-lg">
@@ -409,25 +416,64 @@ const ContactForm: React.FC<ContactFormProps> = ({ darkMode, language, texts }) 
     );
   }
 
+  // Formulario
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
+      {/* Mensaje de Error */}
+      {status === 'error' && errorMessage && (
         <div className="p-3 bg-red-100 dark:bg-red-900 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-300 text-sm">
-          {error}
+          {errorMessage}
         </div>
       )}
+      {/* Campo oculto antispam para Formspree */}
+      <input type="text" name="_gotcha" style={{ display: 'none' }} />
+
+      {/* Nombre */}
       <div>
         <label htmlFor="name" className="block text-sm font-medium mb-1">{texts.contactFormNameLabel}</label>
-        <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} placeholder={texts.contactFormNamePlaceholder} className={inputClasses} disabled={status === 'loading'} />
+        <input 
+          type="text" 
+          name="name" 
+          id="name" 
+          value={formData.name} 
+          onChange={handleChange} 
+          placeholder={texts.contactFormNamePlaceholder} 
+          className={inputClasses} 
+          disabled={status === 'loading'}
+          required 
+        />
       </div>
+      {/* Email */}
       <div>
         <label htmlFor="email" className="block text-sm font-medium mb-1">{texts.contactFormEmailLabel}</label>
-        <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} placeholder={texts.contactFormEmailPlaceholder} className={inputClasses} disabled={status === 'loading'} />
+        <input 
+          type="email" 
+          name="email" 
+          id="email" 
+          value={formData.email} 
+          onChange={handleChange} 
+          placeholder={texts.contactFormEmailPlaceholder} 
+          className={inputClasses} 
+          disabled={status === 'loading'}
+          required // Añadido required HTML
+        />
       </div>
+      {/* Mensaje */}
       <div>
         <label htmlFor="message" className="block text-sm font-medium mb-1">{texts.contactFormMessageLabel}</label>
-        <textarea name="message" id="message" value={formData.message} onChange={handleChange} rows={5} placeholder={texts.contactFormMessagePlaceholder} className={`${inputClasses} resize-none`} disabled={status === 'loading'}></textarea>
+        <textarea 
+          name="message" 
+          id="message" 
+          value={formData.message} 
+          onChange={handleChange} 
+          rows={5} 
+          placeholder={texts.contactFormMessagePlaceholder} 
+          className={`${inputClasses} resize-none`} 
+          disabled={status === 'loading'}
+          required // Añadido required HTML
+        ></textarea>
       </div>
+      {/* Botón Enviar */}
       <button
         type="submit"
         disabled={status === 'loading'} 
@@ -453,7 +499,6 @@ const ContactForm: React.FC<ContactFormProps> = ({ darkMode, language, texts }) 
   );
 };
 
-// --- Componente App (sin cambios significativos) ---
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -496,7 +541,6 @@ const App: React.FC = () => {
   
   const cvUrl = "https://drive.google.com/file/d/1GB0Dteiam8NYeVxglXOHpS3CcQjiDvnO/view?usp=sharing";
 
-  // Estilos globales movidos a una etiqueta <style> normal
   const GlobalStyles = () => (
     <style>{`
       .animate-fade-in-down {
@@ -513,20 +557,17 @@ const App: React.FC = () => {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
       }
-      /* Scrollbar styles (limited browser support) */
       ::-webkit-scrollbar { width: 8px; }
       ::-webkit-scrollbar-track { background: ${darkMode ? '#1e293b' : '#f1f5f9'}; }
       ::-webkit-scrollbar-thumb { background: ${darkMode ? '#38bdf8' : '#0ea5e9'}; border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: ${darkMode ? '#0ea5e9' : '#0284c7'};}
       html { scrollbar-width: thin; scrollbar-color: ${darkMode ? '#38bdf8 #1e293b' : '#0ea5e9 #f1f5f9'}; }
-      
-      /* Nota: Los estilos de .dark .prose-invert son manejados por Tailwind */
     `}</style>
   );
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ease-in-out ${darkMode ? 'bg-slate-900 text-slate-200' : 'bg-gray-50 text-slate-800'} font-sans antialiased`}>
-      <GlobalStyles /> {/* Renderizar los estilos globales */}
+      <GlobalStyles /> 
       <Navbar 
         darkMode={darkMode} 
         toggleDarkMode={toggleDarkMode} 
@@ -685,7 +726,12 @@ const App: React.FC = () => {
           {currentTexts.contactIntro}
         </p>
         <div className={`max-w-xl mx-auto p-6 sm:p-8 rounded-xl shadow-xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
-          <ContactForm darkMode={darkMode} language={language} texts={currentTexts} />
+          {/* Pasar props necesarios al nuevo ContactForm */}
+          <ContactForm 
+            darkMode={darkMode} 
+            language={language} 
+            texts={currentTexts} 
+          />
         </div>
       </Section>
 
@@ -698,12 +744,8 @@ const App: React.FC = () => {
               <a href="https://github.com/connielrs" target="_blank" rel="noopener noreferrer" className="hover:text-sky-500 dark:hover:text-sky-400 transition-colors" aria-label="GitHub Profile"><Github size={22} /></a>
             </div>
           </div>
-           <p className="text-xs mt-4">
-            {currentTexts.footerMadeWith} <span className="text-red-500">&hearts;</span> React + Tailwind CSS.
-          </p>
         </div>
       </footer>
-      
     </div>
   );
 };
